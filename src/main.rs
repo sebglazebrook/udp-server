@@ -32,7 +32,7 @@ impl Server {
             running.store(false, Ordering::SeqCst); 
         });
 	    self.running.store(true, Ordering::SeqCst);
-        // TODO start a thread to drain messages from inbound_queue
+        // TODO start a thread pool to drain messages from inbound_queue
     }
 
     fn start_listening(&mut self) -> Result<(), Error> {
@@ -40,11 +40,11 @@ impl Server {
         while self.running.load(Ordering::SeqCst) {
             // read from the socket
             let mut buf = [0; 10];
-            let (amt, src) = try!(socket.recv_from(&mut buf));
+            let (amt, src) = try!(socket.recv_from(&mut buf)); // TODO this is block and means ctrl-c doesn't work
             self.inbound_queue.push(buf.to_vec());
             // send a reply to the socket we received data from
             let buf = &mut buf[..amt];
-            try!(socket.send_to(buf, &src));
+            try!(socket.send_to(buf, &src)); // TODO return some type of response code maybe??
         }
         Ok(())
     }
