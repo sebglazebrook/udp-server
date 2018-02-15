@@ -1,36 +1,47 @@
+extern crate ctrlc;
+
 use std::net::UdpSocket;
 use std::io::Error;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
-fn start_server() -> Result<(), Error> {
-	{
-		let mut socket = try!(UdpSocket::bind("0.0.0.0:34254"));
-
-		// read from the socket
-		let mut buf = [0; 10];
-		let (amt, src) = try!(socket.recv_from(&mut buf));
-
-		// send a reply to the socket we received data from
-		let buf = &mut buf[..amt];
-		buf.reverse();
-		let seb = String::from_utf8(buf.to_vec()).unwrap();
-		println!("{}", seb);
-		try!(socket.send_to(buf, &src));
-		Ok(())
-	} 
-
+struct Server {
+    running: Arc<AtomicBool>,
 }
-
-struct Server;
 
 impl Server {
 
     pub fn new() -> Self {
-        Server {}
+        Server {
+			running: Arc::new(AtomicBool::new(false)),
+		}
     }
 
-    pub fn start(&self) {
+    pub fn start(&mut self) {
 	    println!("Starting server...");
-	    start_server();
+		let running = self.running.clone();
+		ctrlc::set_handler(move || {
+            running.store(false, Ordering::SeqCst); 
+        });
+	    self.running.store(true, Ordering::SeqCst);
+        self.start_listening();
+		println!("Server closed.");
+    }
+
+    fn start_listening(&mut self) -> Result<(), Error> {
+        while self.running.load(Ordering::SeqCst) {
+            let mut socket = try!(UdpSocket::bind("0.0.0.0:34254"));
+            // read from the socket
+            let mut buf = [0; 10];
+            let (amt, src) = try!(socket.recv_from(&mut buf));
+
+            // send a reply to the socket we received data from
+            let buf = &mut buf[..amt];
+            let seb = String::from_utf8(buf.to_vec()).unwrap();
+            println!("{}", seb);
+            try!(socket.send_to(buf, &src));
+        }
+        Ok(())
     }
 
 }

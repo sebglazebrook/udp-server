@@ -3,4 +3,4 @@
 # or visit https://github.com/sebglazebrook/aliases
 
 up:
-  command: "docker run -ti -v ${PWD}:/code -w /code -p 34254:34254 -e USER=${USER}  -u $(id -u):$(id -g) sebglazebrook/rust-stable:latest cargo run"
+  command: "docker run -ti -v ${PWD}:/code -v ${PWD}/tmp/.cargo:/root/.cargo -w /code -p 34254:34254 sebglazebrook/rust-stable:latest cargo run"
